@@ -22,11 +22,15 @@ from shutil import rmtree
 
 from setuptools import find_packages, setup, Command
 
+print("here")
 _version_re = re.compile(r'__version__\s+=\s+(.*)')
+print(_version_re)
 
 with open('biosppy/__init__.py', 'rb') as f:
     version = str(ast.literal_eval(_version_re.search(
         f.read().decode('utf-8')).group(1)))
+
+print(version)
 
 # Package meta-data.
 NAME = 'biosppy'
