@@ -208,3 +208,59 @@ def eda_sqi_bottcher(x=None, sampling_rate=None):  # -> Timeline
     # the final SQI is the average of the scores 
     return np.mean(quality_score)
     
+def cSQI(r_peaks):
+    """Calculate the Coefficient of Variation of RR Intervals (cSQI).
+    Parameters
+    ----------
+    rpeaks : array-like
+        Array containing R-peak locations.
+    Returns
+    -------
+    cSQI : float
+        Coefficient of Variation of RR Intervals.
+    References
+    ----------
+    ..  [Zhao18] Zhao, Z., & Zhang, Y. (2018).
+    SQI quality evaluation mechanism of single-lead ECG signal based on simple heuristic fusion and fuzzy comprehensive evaluation.
+    Frontiers in Physiology, 9, 727.
+    """
+    rr_intervals = np.diff(rpeaks)
+    sdrr = np.std(rr_intervals)
+    mean_rr = np.mean(rr_intervals)
+    cSQI = sdrr / mean_rr
+    if cSQI < 0.45:
+        return "Optimal cSQI"
+    elif 0.45 <= cSQI <= 0.64:
+        return "Acceptable cSQI"
+    else:
+        return "Unacceptable cSQI"
+
+
+def hosSQI(signal):
+    """Calculate the Higher-order-statistics-SQI (hosSQI).
+    Parameters
+    ----------
+    signal : array-like
+        ECG signal.
+    Returns
+    -------
+    hosSQI : float
+        Higher-order-statistics-SQI.
+    References
+    ----------
+    .. [Nardelli20] Nardelli, M., Lanata, A., Valenza, G., Felici, M., Baragli, P., & Scilingo, E.P. (2020).
+    A tool for the real-time evaluation of ECG signal quality and activity: Application to submaximal treadmill test in horses.
+    Biomedical Signal Processing and Control, 56, 101666. doi: 10.1016/j.bspc.2019.101666.
+    .. [Rahman22] Rahman, Md. Saifur, Karmakar, Chandan, Natgunanathan, Iynkaran, Yearwood, John, & Palaniswami, Marimuthu. (2022).
+    Robustness of electrocardiogram signal quality indices.
+    Journal of The Royal Society Interface, 19. doi: 10.1098/rsif.2022.0012.
+    """
+    kSQI = stats.kurtosis(filtered_ecg)
+    sSQI = stats.skew(filtered_ecg)
+    hosSQI = abs(sSQI) * kSQI / 5
+    if hosSQI > 0.8:
+        return "Optimal hosSQI"
+    elif 0.5 < hosSQI <= 0.8:
+        return "Acceptable hosSQI"
+    else:
+        return "Unacceptable hosSQI"
