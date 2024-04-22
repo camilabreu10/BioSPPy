@@ -12,6 +12,8 @@ This module provides methods to extract frequency features.
 # Imports
 # 3rd party
 import numpy as np
+from scipy import signal
+from PyEMD import EMD
 
 # local
 from .. import utils
@@ -202,7 +204,15 @@ def spectral_features(freqs=None, power=None, sampling_rate=1000.):
         Spectral slope. The slope of the linear regression of the power spectrum.
     spread : float
         Spectral spread. The standard deviation of the power spectrum.
-
+    contrast : float
+        Spectral contrast. The variation in energy levels between different frequency bands in the power spectrum.
+    flatness : float
+        Spectral flatness. Estimates to which degree the frequencies in the spectrum are uniformly distributed.
+    entropy : float
+        Spectral entropy. The degree of disorder in the spectral distribution.
+    hilbert_freq : float
+        Mean of Hilbert Frequencies: The average instantaneous frequency variations over time within a signal's components obtained through Empirical Mode Decomposition and Hilbert Transform.
+    
     """
 
     # check inputs
@@ -264,4 +274,38 @@ def spectral_features(freqs=None, power=None, sampling_rate=1000.):
     spectral_spread = np.sqrt(np.sum(power * (freqs - spectral_centroid) ** 2) / np.sum(power))
     feats = feats.append(spectral_spread, 'spread')
 
+    # spectral contrast
+    fmin = 0.5  # Minimum frequency for the spectral contrast band
+    fmax = 20.0  # Maximum frequency for the spectral contrast band
+    f, Pxx = signal.periodogram(x=signal, fs=sampling_rate)
+    ind_min = np.argmax(f > fmin) - 1
+    ind_max = np.argmax(f > fmax) - 1
+    spectral_contrast = np.trapz(Pxx[ind_min: ind_max], f[ind_min: ind_max])
+    feats = feats.append(spectral_contrast, 'spectral_contrast')
+
+    # spectral flatness
+    nperseg = min(256, len(signal))
+    frequencies, times, Sxx = signal.spectrogram(signal, fs=sampling_rate, nperseg=nperseg)
+    spectral_flatness = np.exp(np.mean(np.log(Sxx), axis=0)) / np.mean(Sxx, axis=0)
+    spectral_flatness = np.mean(spectral_flatness)
+    feats = feats.append(spectral_flatness, 'spectral_flatness')
+
+    # spectral entropy
+    normalized_PSD = Sxx / np.sum(Sxx, axis=0)
+    spectral_entropy = -np.sum(normalized_PSD * np.log2(normalized_PSD + 1e-10), axis=0)
+    spectral_entropy = np.mean(spectral_entropy)
+    feats = feats.append(spectral_entropy, 'spectral_entropy')
+    
+    # hilbert frequencies
+    emd = EMD()  # Empirical Mode Decomposition
+    IMFs = emd(signal)  # Intrinsic Mode Functions
+    hilbert_frequencies = []
+    n_samples = len(IMFs)  
+    for imf in IMFs:
+        analytic_signal = signal.hilbert(imf)  # Hilbert transform 
+        instantaneous_phase = np.unwrap(np.angle(analytic_signal))  # instantaneous phase
+        instantaneous_frequency = np.diff(instantaneous_phase) / (sampling_rate * 2 * np.pi)  # computes instantaneous frequency
+        hilbert_frequencies.append(instantaneous_frequency)
+    feats = feats.append(np.mean(hilbert_frequencies), 'hilbert_freq')
+    
     return feats
