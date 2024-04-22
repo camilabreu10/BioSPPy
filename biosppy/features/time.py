@@ -12,6 +12,7 @@ This module provides methods to extract time features.
 # Imports
 # 3rd party
 import numpy as np
+import nolds
 
 # local
 from .. import utils
@@ -98,6 +99,10 @@ def time(signal=None, sampling_rate=1000., include_diff=True):
     # hjorth features
     hjorth_feats = hjorth_features(signal)
     feats = feats.join(hjorth_feats)
+
+    # Lyapunov Exponent
+    lyp = nolds.lyap_r(signal, emb_dim=10, lag=1)
+    feats = feats.append(lyp, 'Lyapunov_exp')
 
     # diff stats
     if include_diff:
