@@ -76,6 +76,12 @@ def time(signal=None, sampling_rate=1000., include_diff=True):
     autocorr_sum = np.sum(np.correlate(signal, signal, 'full'))
     feats = feats.append(autocorr_sum, 'autocorr_sum')
 
+    # entropy
+    unique_values, counts = np.unique(signal, return_counts=True)
+    probabilities = counts / len(signal)
+    entropy = -np.sum(probabilities * np.log2(probabilities))
+    feats = feats.append(entropy, 'entropy')
+
     # total energy
     total_energy = np.sum(np.abs(signal)**2)
     feats = feats.append(total_energy, 'total_energy')
@@ -98,6 +104,20 @@ def time(signal=None, sampling_rate=1000., include_diff=True):
     # hjorth features
     hjorth_feats = hjorth_features(signal)
     feats = feats.join(hjorth_feats)
+
+    # zero crossing rate
+    zcr = len(st.zero_cross(signal=signal))/len(signal)
+    feats = feats.append(zcr, 'zero_crossing_rate')
+    
+    # impulse factor
+    abs_signal_feats = st.signal_stats(np.abs(signal))
+    peak_amplitude = abs_signal_feats['max']
+    mav = abs_signal_feats['mean']
+    if peak_amplitude == 0:
+        impulse_factor = 0
+    else:
+        impulse_factor = peak_amplitude / mav
+    feats = feats.append(impulse_factor, 'impulse_factor')
 
     # diff stats
     if include_diff:
